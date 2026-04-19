@@ -37,7 +37,7 @@ export default class LoadScene extends Phaser.Scene {
         bg.displayHeight = height;
 
         // Add the Title Text
-        const titleText = this.add.text(width / 2, height / 2 - 100, 'SCOUT RULES', {
+        const titleText = this.add.text(width / 2, height / 2 - 100, 'TABA3NI SCOUT', {
             fontFamily: '"Press Start 2P"',
             fontSize: '72px',
             fill: '#f9dc36',

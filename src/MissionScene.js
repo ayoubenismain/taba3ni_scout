@@ -59,6 +59,13 @@ export default class MissionScene extends Phaser.Scene {
 
         // Intro State
         this.introTriggered = false;
+        
+        // Mission State
+        this.missionPhase = 'FIRST_AID';
+        this.firstAidState = {
+            waterUsed: false,
+            bandageUsed: false
+        };
 
         // Camera Follow
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -85,29 +92,27 @@ export default class MissionScene extends Phaser.Scene {
     createDialogueUI() {
         const { width, height } = this.scale;
         
-        // Positioning the container so it's hidden below the screen initially
-        this.dialogueContainer = this.add.container(0, height + 100).setScrollFactor(0).setDepth(1500).setAlpha(0);
+        // Positioning the container at the bottom
+        this.dialogueContainer = this.add.container(0, height).setScrollFactor(0).setDepth(1500).setAlpha(0);
         this.dialogueActive = false;
         this.choiceActive = false;
         this.dialogueQueue = [];
         
         // Background Box (Quarter of screen, touching the bottom)
-        const boxHeight = height * 0.28;
+        const boxHeight = height * 0.25;
         const box = this.add.graphics();
-        box.fillStyle(0x000000, 0.85);
+        box.fillStyle(0x000000, 0.9);
         box.lineStyle(4, 0x6dc5b1, 1);
-        // Positioned at (0, -boxHeight) so the bottom edges the container base (which will be at screen height)
+        
+        // The box sits from (0, -boxHeight) to (width, 0)
         box.fillRect(0, -boxHeight, width, boxHeight);
         box.strokeRect(0, -boxHeight, width, boxHeight);
         this.dialogueContainer.add(box);
 
-        // Portrait Container (to allow cropping or positioning)
-        this.portrait = this.add.image(150, -boxHeight - 20, 'grandpa').setOrigin(0.5, 1).setScale(1);
-        this.dialogueContainer.add(this.portrait);
-
         // Name Box
         const nameBg = this.add.graphics();
         nameBg.fillStyle(0x6dc5b1, 1);
+        // Positioned just above the dialogue box
         nameBg.fillRect(20, -boxHeight - 40, 200, 40);
         this.dialogueContainer.add(nameBg);
 
@@ -117,6 +122,10 @@ export default class MissionScene extends Phaser.Scene {
             fill: '#000000'
         }).setOrigin(0.5);
         this.dialogueContainer.add(this.nameText);
+
+        // Portrait Container (Visual Novel Style: Half visible above the name)
+        this.portrait = this.add.image(120, -boxHeight - 40, 'grandpa').setOrigin(0.5, 1).setScale(1.2);
+        this.dialogueContainer.add(this.portrait);
 
         // Dialogue Text
         this.dialogueText = this.add.text(50, -boxHeight + 40, '', {
@@ -137,7 +146,7 @@ export default class MissionScene extends Phaser.Scene {
 
         // Input listeners for advancing
         const advance = () => {
-            if (this.dialogueActive) {
+            if (this.dialogueActive && !this.choiceActive) {
                 this.nextDialogue();
             }
         };
@@ -198,8 +207,7 @@ export default class MissionScene extends Phaser.Scene {
             this.tweens.add({
                 targets: this.dialogueContainer,
                 alpha: 1,
-                y: this.scale.height,
-                duration: 500,
+                duration: 300,
                 ease: 'Power2'
             });
         }
@@ -218,7 +226,6 @@ export default class MissionScene extends Phaser.Scene {
         this.tweens.add({
             targets: this.dialogueContainer,
             alpha: 0,
-            y: this.scale.height + 100,
             duration: 250,
             ease: 'Power2'
         });
@@ -255,7 +262,11 @@ export default class MissionScene extends Phaser.Scene {
             return;
         }
 
-        this.showChoiceUI();
+        if (this.missionPhase === 'FIRST_AID') {
+            this.showChoiceUI();
+        } else if (this.missionPhase === 'DEHYDRATION_PHASE') {
+            this.showBackpackMenu();
+        }
     }
 
     showChoiceUI() {
@@ -283,32 +294,27 @@ export default class MissionScene extends Phaser.Scene {
 
         // Item 1: Sterilizing Water
         const waterBtn = this.add.container(-120, 20);
-        const waterIcon = this.add.image(0, -30, 'prop_jug').setScale(0.8).setInteractive({ useHandCursor: true });
+        const waterIcon = this.add.image(0, -30, 'water_bottle').setScale(1).setInteractive({ useHandCursor: true });
         const waterLabel = this.add.text(0, 40, 'Sterilizing\nWater', {
             fontFamily: 'Arial', fontSize: '18px', fill: '#6dc5b1', align: 'center'
         }).setOrigin(0.5);
         waterBtn.add([waterIcon, waterLabel]);
         
         waterIcon.on('pointerdown', () => this.handleChoice('water'));
-        waterIcon.on('pointerover', () => waterIcon.setScale(0.9));
-        waterIcon.on('pointerout', () => waterIcon.setScale(0.8));
+        waterIcon.on('pointerover', () => waterIcon.setScale(1.1));
+        waterIcon.on('pointerout', () => waterIcon.setScale(1));
         
         // Item 2: Bandages
         const bandageBtn = this.add.container(120, 20);
-        // Simple graphics for bandage
-        const bandageIcon = this.add.graphics().setInteractive(new Phaser.Geom.Rectangle(-40, -60, 80, 80), Phaser.Geom.Rectangle.Contains);
-        bandageIcon.fillStyle(0xffffff, 1);
-        bandageIcon.fillRect(-30, -50, 60, 40);
-        bandageIcon.lineStyle(2, 0xff0000, 1);
-        bandageIcon.strokeRect(-10, -50, 20, 40);
-        bandageIcon.strokeRect(-30, -40, 60, 20);
-        
+        const bandageIcon = this.add.image(0, -30, 'sterile_bandage').setScale(1).setInteractive({ useHandCursor: true });
         const bandageLabel = this.add.text(0, 40, 'Clean\nBandages', {
             fontFamily: 'Arial', fontSize: '18px', fill: '#6dc5b1', align: 'center'
         }).setOrigin(0.5);
         bandageBtn.add([bandageIcon, bandageLabel]);
         
         bandageIcon.on('pointerdown', () => this.handleChoice('bandage'));
+        bandageIcon.on('pointerover', () => bandageIcon.setScale(1.1));
+        bandageIcon.on('pointerout', () => bandageIcon.setScale(1));
         
         this.choiceContainer.add([waterBtn, bandageBtn]);
 
@@ -332,11 +338,115 @@ export default class MissionScene extends Phaser.Scene {
                 this.choiceContainer.destroy();
                 
                 if (choice === 'water') {
+                    this.firstAidState.waterUsed = true;
                     this.showDialogue('GRANDPA', "Good. Wash away the dirt first. We must clear the wound before we can help Amine further.", 'grandpa');
-                } else {
-                    this.showDialogue('GRANDPA', "Stop! You’ll trap the germs inside. Clean it before you cover it. Safety first, Scout!", 'grandpa');
+                } else if (choice === 'bandage') {
+                    if (this.firstAidState.waterUsed) {
+                        this.firstAidState.bandageUsed = true;
+                        this.triggerDehydrationEvent();
+                    } else {
+                        this.showDialogue('GRANDPA', "Stop! You’ll trap the germs inside. Clean it before you cover it. Safety first, Scout!", 'grandpa');
+                    }
                 }
             }
+        });
+    }
+
+    triggerDehydrationEvent() {
+        this.startDialogueSequence([
+            { name: 'AMINE', text: "Ohh, thank you my friend. I appreciate it", portrait: 'amine_injured' },
+            { name: 'AMINE', text: "Oh my god, I'm feeling dizzy", portrait: 'amine_injured' },
+            { name: 'GRANDPA', text: "It seems that he's dehydrated", portrait: 'grandpa' }
+        ]);
+
+        // Wait for dialogue to finish before spawning
+        this.time.delayedCall(100, () => {
+             const checkFinished = setInterval(() => {
+                  if (!this.dialogueActive) {
+                       clearInterval(checkFinished);
+                       this.spawnNearTree();
+                  }
+             }, 100);
+        });
+    }
+
+    spawnNearTree() {
+        const { width, height } = this.scale;
+        
+        // Fade out
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            // New coordinates (340, 491 on 1024 base)
+            const treeX = (345 / 1024) * this.cameras.main.getBounds().width;
+            const treeY = (495 / 1024) * this.cameras.main.getBounds().height;
+
+            this.player.setPosition(treeX - 40, treeY);
+            this.amine.setPosition(treeX + 40, treeY);
+            this.grandpa.setPosition(treeX + 100, treeY);
+
+            this.missionPhase = 'DEHYDRATION_PHASE';
+            
+            // Fade in
+            this.cameras.main.fadeIn(500, 0, 0, 0);
+        });
+    }
+
+    showBackpackMenu() {
+        this.choiceActive = true;
+        const { width, height } = this.scale;
+
+        this.backpackContainer = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(2000);
+        
+        // Modal Background
+        const bg = this.add.graphics();
+        bg.fillStyle(0x000000, 0.95);
+        bg.lineStyle(4, 0x6dc5b1, 1);
+        bg.fillRoundedRect(-250, -150, 500, 300, 15);
+        bg.strokeRoundedRect(-250, -150, 500, 300, 15);
+        this.backpackContainer.add(bg);
+
+        // Backpack Icon (Top Left of the bloc)
+        const backpackIcon = this.add.image(-220, -120, 'scout_backpack').setScale(0.8).setOrigin(0.5);
+        this.backpackContainer.add(backpackIcon);
+
+        // Title
+        const title = this.add.text(0, -100, 'BACKPACK', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '18px',
+            fill: '#f9dc36'
+        }).setOrigin(0.5);
+        this.backpackContainer.add(title);
+
+        // Water Bottle Option
+        const waterBtn = this.add.container(0, 20);
+        const waterIcon = this.add.image(0, -20, 'water_bottle').setScale(1.5).setInteractive({ useHandCursor: true });
+        const waterLabel = this.add.text(0, 60, 'GIVE WATER', {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#6dc5b1'
+        }).setOrigin(0.5);
+        waterBtn.add([waterIcon, waterLabel]);
+        
+        waterIcon.on('pointerdown', () => {
+            this.choiceActive = false;
+            this.tweens.add({
+                targets: this.backpackContainer,
+                scale: 0,
+                duration: 200,
+                onComplete: () => {
+                    this.backpackContainer.destroy();
+                    this.showDialogue('AMINE', "Refreshing... I feel much better now. Thank you, Scout!", 'amine_injured');
+                }
+            });
+        });
+
+        this.backpackContainer.add(waterBtn);
+
+        // Entrance animation
+        this.backpackContainer.setScale(0);
+        this.tweens.add({
+            targets: this.backpackContainer,
+            scale: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
         });
     }
 
