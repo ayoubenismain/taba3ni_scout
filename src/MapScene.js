@@ -17,11 +17,11 @@ export default class MapScene extends Phaser.Scene {
         
         // Map coordinate standard zigzag progression
         const levelsInfo = [
-            { id: 1, x: 0.23, y: 0.75, status: 'unlocked' },
-            { id: 2, x: 0.44, y: 0.58, status: 'locked' },
+            { id: 1, x: 0.70, y: 0.20, status: 'unlocked' },
+            { id: 2, x: 0.54, y: 0.26, status: 'locked' },
             { id: 3, x: 0.65, y: 0.49, status: 'locked' },
-            { id: 4, x: 0.54, y: 0.26, status: 'locked' },
-            { id: 5, x: 0.61, y: 0.08, status: 'locked' }
+            { id: 4, x: 0.44, y: 0.58, status: 'locked' },
+            { id: 5, x: 0.23, y: 0.75, status: 'locked' }
         ];
 
         const mapLeft = (width / 2) - (map.displayWidth / 2);
@@ -96,7 +96,25 @@ export default class MapScene extends Phaser.Scene {
                 nodeBtn.on('pointerdown', () => {
                     this.playClickSound();
                     console.log('Entering Level ' + lvl.id);
-                    // Could start MissionScene here
+                    
+                    // Disable further input
+                    this.input.enabled = false;
+                    const uiOverlay = document.getElementById('ui-overlay');
+                    if (uiOverlay) {
+                        uiOverlay.classList.add('hidden');
+                    }
+                    
+                    // Zoom towards the clicked node
+                    this.cameras.main.pan(nodeX, nodeY, 1500, 'Power2');
+                    this.cameras.main.zoomTo(3, 1500, 'Power2');
+                    
+                    // Add a fade out that starts slightly after the zoom begins
+                    this.time.delayedCall(500, () => {
+                        this.cameras.main.fadeOut(1000, 0, 0, 0);
+                        this.cameras.main.once('camerafadeoutcomplete', () => {
+                            this.scene.start('MissionScene');
+                        });
+                    });
                 });
             } else {
                 // Click interaction for locked level
@@ -163,5 +181,22 @@ export default class MapScene extends Phaser.Scene {
         gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.1);
         osc.start();
         osc.stop(ctx.currentTime + 0.1);
+    }
+
+    playClickSound() {
+        if (!this.sound.context) return;
+        const ctx = this.sound.context;
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
     }
 }

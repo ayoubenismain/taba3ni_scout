@@ -5,6 +5,7 @@ import LoadScene from './LoadScene.js';
 import SelectionScene from './SelectionScene.js';
 import NameScene from './NameScene.js';
 import MapScene from './MapScene.js';
+import MissionScene from './MissionScene.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -16,7 +17,7 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
     pixelArt: true, // Prevents blurring
-    scene: [BootScene, LoadScene, SelectionScene, NameScene, MapScene]
+    scene: [BootScene, LoadScene, SelectionScene, NameScene, MapScene, MissionScene]
 };
 
 const game = new Phaser.Game(config);

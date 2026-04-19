@@ -14,6 +14,7 @@ export default class LoadScene extends Phaser.Scene {
         this.load.image('map_icon_girl', '/assets/girl_without_bg.png');
         this.load.image('map_icon_boy', '/assets/boy_wihout_bg.png');
         this.load.image('map_bg', '/assets/map_this.png');
+        this.load.image('new_map_bg', '/assets/new_map_bg.png');
     }
 
     create() {
