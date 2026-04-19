@@ -15,6 +15,8 @@ export default class LoadScene extends Phaser.Scene {
         this.load.image('map_icon_boy', '/assets/boy_wihout_bg.png');
         this.load.image('map_bg', '/assets/map_this.png');
         this.load.image('new_map_bg', '/assets/new_map_bg.png');
+        this.load.image('medal', '/assets/medal.png');
+        this.load.image('logo8', '/assets/logo8.png');
 
         // Sliced Sprite Assets
         const spriteList = [
@@ -36,30 +38,18 @@ export default class LoadScene extends Phaser.Scene {
         bg.displayWidth = width;
         bg.displayHeight = height;
 
-        // Add the Title Text
-        const titleText = this.add.text(width / 2, height / 2 - 100, 'TABA3NI SCOUT', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '72px',
-            fill: '#f9dc36',
-            align: 'center'
-        }).setOrigin(0.5);
-        titleText.setStroke('#3e3e3e', 8);
-        titleText.setShadow(6, 6, '#000000', 0, true, false);
+        // Add Logo centered on screen
+        const logo = this.add.image(width / 2, height / 2 - 100, 'logo8');
+        logo.setOrigin(0.5);
+        logo.setScale(1.2);
 
-        // Add "Glitch" or Shimmer effect using a quick tween
-        this.tweens.add({
-            targets: titleText,
-            alpha: { from: 0.7, to: 1 },
-            duration: 100,
-            yoyo: true,
-            repeat: 5,
-        });
+
 
         // Add a pixelated progress bar
         const progressBar = this.add.graphics();
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
-        progressBox.fillRect(width / 2 - 200, height / 2 + 100, 400, 30);
+        progressBox.fillRect(width / 2 - 220, height / 2 + 100, 400, 30);
 
         // Simulate loading time (2 seconds)
         let percent = 0;

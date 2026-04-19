@@ -427,7 +427,7 @@ export default class MissionScene extends Phaser.Scene {
         this.choiceActive = true;
         const { width, height } = this.scale;
 
-        this.backpackContainer = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(2000);
+        this.backpackContainer = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(3000);
 
         // Modal Background
         const bg = this.add.graphics();
@@ -449,15 +449,19 @@ export default class MissionScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this.backpackContainer.add(title);
 
-        // Water Bottle Option
-        const waterBtn = this.add.container(0, 20);
-        const waterIcon = this.add.image(0, -20, 'water_bottle').setScale(1.5).setInteractive({ useHandCursor: true });
-        const waterLabel = this.add.text(0, 60, 'أعطيه الماء', {
-            fontFamily: '"Noto Kufi Arabic"', fontSize: '16px', fill: '#6dc5b1'
+        // Hit area for the bottle to make it very easy to click
+        const waterHitArea = this.add.rectangle(0, 40, 200, 200, 0xffffff, 0).setInteractive({ useHandCursor: true });
+        
+        // Water Bottle Option - added directly to main container (no nested container)
+        const waterIcon = this.add.image(0, 0, 'water_bottle').setScale(2);
+        const waterLabel = this.add.text(0, 80, 'أعطيه الماء', {
+            fontFamily: '"Noto Kufi Arabic"', fontSize: '20px', fill: '#6dc5b1'
         }).setOrigin(0.5);
-        waterBtn.add([waterIcon, waterLabel]);
+        
+        this.backpackContainer.add([waterHitArea, waterIcon, waterLabel]);
 
-        waterIcon.on('pointerdown', () => {
+        const triggerAchievement = () => {
+            if (!this.choiceActive) return;
             this.choiceActive = false;
             this.tweens.add({
                 targets: this.backpackContainer,
@@ -465,12 +469,13 @@ export default class MissionScene extends Phaser.Scene {
                 duration: 200,
                 onComplete: () => {
                     this.backpackContainer.destroy();
-                    this.showDialogue('أمين', "يا ربي شكراً بزاف", 'amine_injured');
+                    this.showAchievement();
                 }
             });
-        });
+        };
 
-        this.backpackContainer.add(waterBtn);
+        waterHitArea.on('pointerdown', triggerAchievement);
+        waterIcon.setInteractive({ useHandCursor: true }).on('pointerdown', triggerAchievement);
 
         // Entrance animation
         this.backpackContainer.setScale(0);
@@ -479,6 +484,180 @@ export default class MissionScene extends Phaser.Scene {
             scale: 1,
             duration: 300,
             ease: 'Back.easeOut'
+        });
+    }
+
+    showAchievement() {
+        const { width, height } = this.scale;
+
+        // Lock input during achievement display
+        this.choiceActive = true;
+        this.player.setVelocity(0, 0);
+
+        // Full-screen dark overlay
+        const overlay = this.add.graphics().setScrollFactor(0).setDepth(2500);
+        overlay.fillStyle(0x000000, 0.7);
+        overlay.fillRect(0, 0, width, height);
+        overlay.setAlpha(0);
+
+        // Achievement container
+        const achContainer = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(2600);
+
+        // Glow circle behind the medal
+        const glow = this.add.graphics();
+        glow.fillStyle(0xf9dc36, 0.15);
+        glow.fillCircle(0, -30, 120);
+        glow.fillStyle(0xf9dc36, 0.08);
+        glow.fillCircle(0, -30, 160);
+        achContainer.add(glow);
+
+        // Medal image
+        const medal = this.add.image(0, -30, 'medal').setScale(0.4);
+        achContainer.add(medal);
+
+        // "New Achievement!" header
+        const headerText = this.add.text(0, 70, '🏆 إنجاز جديد!', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '28px',
+            fill: '#f9dc36',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+        achContainer.add(headerText);
+
+        // Achievement name
+        const achName = this.add.text(0, 110, 'مسعف صغير', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '20px',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        achContainer.add(achName);
+
+        // Description
+        const achDesc = this.add.text(0, 145, 'ساعدت صاحبك وأنقذته!', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '14px',
+            fill: '#6dc5b1'
+        }).setOrigin(0.5);
+        achContainer.add(achDesc);
+
+        // Start invisible and scaled down
+        achContainer.setScale(0).setAlpha(0);
+
+        // Animate overlay in
+        this.tweens.add({
+            targets: overlay,
+            alpha: 1,
+            duration: 300
+        });
+
+        // Animate achievement popup in with bounce
+        this.tweens.add({
+            targets: achContainer,
+            scale: 1,
+            alpha: 1,
+            duration: 600,
+            ease: 'Back.easeOut',
+            delay: 200
+        });
+
+        // Medal shine rotation
+        this.tweens.add({
+            targets: medal,
+            angle: { from: -5, to: 5 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.inOut'
+        });
+
+        // Pulsing glow
+        this.tweens.add({
+            targets: glow,
+            alpha: { from: 1, to: 0.5 },
+            duration: 1000,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Play achievement sound
+        this.playAchievementSound();
+
+        // Sparkle particles around the medal
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const sparkle = this.add.text(
+                Math.cos(angle) * 100,
+                -30 + Math.sin(angle) * 100,
+                '✦', { fontSize: '20px', fill: '#f9dc36' }
+            ).setOrigin(0.5);
+            achContainer.add(sparkle);
+
+            this.tweens.add({
+                targets: sparkle,
+                alpha: { from: 1, to: 0.2 },
+                scale: { from: 1, to: 0.5 },
+                duration: 600,
+                yoyo: true,
+                repeat: -1,
+                delay: i * 100
+            });
+        }
+
+        // Auto-dismiss after 4 seconds
+        this.time.delayedCall(4000, () => {
+            this.tweens.add({
+                targets: [achContainer, overlay],
+                alpha: 0,
+                scale: 0.8,
+                duration: 400,
+                onComplete: () => {
+                    achContainer.destroy();
+                    overlay.destroy();
+                    this.choiceActive = false;
+                }
+            });
+        });
+
+        // Also allow click to dismiss (after a delay to prevent instant dismiss)
+        this.time.delayedCall(1000, () => {
+            this.input.once('pointerdown', () => {
+                this.tweens.killTweensOf(achContainer);
+                this.tweens.killTweensOf(overlay);
+                this.tweens.killTweensOf(medal);
+                this.tweens.killTweensOf(glow);
+                this.tweens.add({
+                    targets: [achContainer, overlay],
+                    alpha: 0,
+                    duration: 300,
+                    onComplete: () => {
+                        achContainer.destroy();
+                        overlay.destroy();
+                        this.choiceActive = false;
+                    }
+                });
+            });
+        });
+    }
+
+    playAchievementSound() {
+        if (!this.sound.context) return;
+        const ctx = this.sound.context;
+        if (ctx.state === 'suspended') ctx.resume();
+
+        // Triumphant ascending chime
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.4);
+            osc.start(ctx.currentTime + i * 0.15);
+            osc.stop(ctx.currentTime + i * 0.15 + 0.4);
         });
     }
 
