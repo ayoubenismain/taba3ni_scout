@@ -7,9 +7,9 @@ export default class LoadScene extends Phaser.Scene {
 
     preload() {
         // Load the rest of the game assets here
-        this.load.image('icon_girl', '/assets/icon_girl_1776565676377.png');
-        this.load.image('icon_boy', '/assets/icon_boy_1776565706273.png');
-        
+        this.load.image('icon_girl', '/assets/girl_without_bg.png');
+        this.load.image('icon_boy', '/assets/boy_wihout_bg.png');
+
         // Map avatars without backgrounds
         this.load.image('map_icon_girl', '/assets/girl_without_bg.png');
         this.load.image('map_icon_boy', '/assets/boy_wihout_bg.png');
@@ -60,7 +60,7 @@ export default class LoadScene extends Phaser.Scene {
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
         progressBox.fillRect(width / 2 - 200, height / 2 + 100, 400, 30);
-        
+
         // Simulate loading time (2 seconds)
         let percent = 0;
         this.time.addEvent({
@@ -71,7 +71,7 @@ export default class LoadScene extends Phaser.Scene {
                 progressBar.clear();
                 progressBar.fillStyle(0x6dc5b1, 1);
                 progressBar.fillRect(width / 2 - 197, height / 2 + 103, 394 * percent, 24);
-                
+
                 if (percent >= 1) {
                     this.time.delayedCall(200, () => {
                         this.showMenu();
@@ -85,19 +85,19 @@ export default class LoadScene extends Phaser.Scene {
         const { width, height } = this.scale;
         // Emulate the "Pixels" reference with "START"
         const playBtn = this.createButton(width / 2, height / 2 + 180, '#f9dc36', '#3e3e3e', 'ابدأ');
-        
+
         playBtn.setInteractive({ useHandCursor: true });
-        
+
         playBtn.on('pointerover', () => {
             playBtn.setScale(1.05);
             this.playHoverSound();
         });
         playBtn.on('pointerout', () => playBtn.setScale(1));
         playBtn.on('pointerdown', () => {
-             this.playClickSound();
-             this.time.delayedCall(200, () => {
-                  this.scene.start('SelectionScene');
-             });
+            this.playClickSound();
+            this.time.delayedCall(200, () => {
+                this.scene.start('SelectionScene');
+            });
         });
     }
 
