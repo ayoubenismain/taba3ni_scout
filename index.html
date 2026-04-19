@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scout Rules: Pixel Pioneers</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <!-- The Phaser Game Canvas Host -->
+    <div id="game-container"></div>
+    
+    <!-- UI Overlay for Game Map (Initially Hidden) -->
+    <div id="ui-overlay" class="hidden">
+      <div class="top-hud">
+        <div class="hud-circle left-circle">
+          <img src="/assets/icon_boy.png" alt="Profile" id="hud-profile-img"/>
+        </div>
+        <div class="hud-circle right-circle">
+          <span>Q</span>
+        </div>
+      </div>
+      <div class="bottom-hud">
+        <div class="player-info">
+          <div id="hud-player-name" class="player-name">SCOUT</div>
+          <div class="player-rank">Level 1 Pioneer</div>
+          <div class="inv-slot"></div>
+          <div class="inv-slot"></div>
+          <div class="inv-slot"></div>
+          <div class="inv-slot active-slot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Name Input Overlay -->
+    <div id="name-input-overlay" class="hidden">
+      <div class="name-modal">
+        <h2>ENTER YOUR NAME</h2>
+        <input type="text" id="player-name-input" placeholder="SCOUT" maxlength="12" autocomplete="off" />
+        <button id="submit-name-btn">CONFIRM</button>
+      </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
