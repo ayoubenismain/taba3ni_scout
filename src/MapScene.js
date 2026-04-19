@@ -135,7 +135,7 @@ export default class MapScene extends Phaser.Scene {
         
         const nameEl = document.getElementById('hud-player-name');
         if(nameEl) {
-            nameEl.innerText = this.registry.get('playerName') || 'SCOUT';
+            nameEl.innerText = this.registry.get('playerName') || '\u0643\u0634\u0627\u0641';
         }
 
         this.playStartSound();

@@ -14,9 +14,9 @@ export default class SelectionScene extends Phaser.Scene {
         bg.displayHeight = height;
         bg.setTint(0x333333); // Dim the background
 
-        this.add.text(width / 2, Math.max(80, height * 0.15), 'SELECT YOUR PIONEER', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '24px',
+        this.add.text(width / 2, Math.max(80, height * 0.15), 'اختر شخصيتك', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '28px',
             fill: '#ffffff'
         }).setOrigin(0.5);
 
@@ -24,13 +24,13 @@ export default class SelectionScene extends Phaser.Scene {
         const girlIcon = this.add.image(width / 2 - 200, height / 2, 'icon_girl').setInteractive({ useHandCursor: true });
         girlIcon.setScale(0.4);
         const girlOutline = this.add.graphics();
-        this.add.text(width / 2 - 200, height / 2 + 160, 'GIRL', { fontFamily: '"Press Start 2P"', fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5);
+        this.add.text(width / 2 - 200, height / 2 + 160, 'بنت', { fontFamily: '"Noto Kufi Arabic"', fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5);
 
         // Square B: Boy
         const boyIcon = this.add.image(width / 2 + 200, height / 2, 'icon_boy').setInteractive({ useHandCursor: true });
         boyIcon.setScale(0.4);
         const boyOutline = this.add.graphics();
-        this.add.text(width / 2 + 200, height / 2 + 160, 'BOY', { fontFamily: '"Press Start 2P"', fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5);
+        this.add.text(width / 2 + 200, height / 2 + 160, 'ولد', { fontFamily: '"Noto Kufi Arabic"', fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5);
 
         let selected = null;
         let beginBtn = null;
@@ -52,7 +52,7 @@ export default class SelectionScene extends Phaser.Scene {
                 btnBg.fillStyle(0x4a81ba, 1); // Blue
                 btnBg.fillRect(-150, -25, 300, 50);
                 
-                const btnText = this.add.text(0, 0, 'BEGIN ADVENTURE', { fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#ffffff' }).setOrigin(0.5);
+                const btnText = this.add.text(0, 0, 'هيا نبدأ المغامرة!', { fontFamily: '"Noto Kufi Arabic"', fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5);
                 
                 beginBtn.add([btnBg, btnText]);
                 beginBtn.setSize(300, 50);

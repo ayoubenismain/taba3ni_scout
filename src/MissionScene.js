@@ -14,12 +14,12 @@ export default class MissionScene extends Phaser.Scene {
         const scaleY = height / bg.height;
         const bgScale = Math.max(scaleX, scaleY); // Cover screen
         bg.setScale(bgScale);
-        
+
         // Bounds for movement (based on background size)
         // Set top limit at 12.7% (Y=130/1024) to lock feet to street
         const horizonY = bg.displayHeight * 0.127;
         this.physics.world.setBounds(0, horizonY, bg.displayWidth, bg.displayHeight - horizonY);
-        
+
         // Characters near the sign (approx. bottom center of the map context)
         const signX = (435 / 1024) * bg.displayWidth;
         const signY = (910 / 1024) * bg.displayHeight;
@@ -33,7 +33,7 @@ export default class MissionScene extends Phaser.Scene {
         const amineY = (220 / 1024) * bg.displayHeight;
         this.amine = this.physics.add.sprite(amineX, amineY, 'amine_injured');
         this.amine.setScale(0.5).setImmovable(true).setInteractive({ useHandCursor: true });
-        
+
         this.amine.on('pointerdown', () => this.handleAmineInteraction());
 
         // Player (Kid)
@@ -59,7 +59,7 @@ export default class MissionScene extends Phaser.Scene {
 
         // Intro State
         this.introTriggered = false;
-        
+
         // Mission State
         this.missionPhase = 'FIRST_AID';
         this.firstAidState = {
@@ -70,11 +70,12 @@ export default class MissionScene extends Phaser.Scene {
         // Camera Follow
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.setBounds(0, 0, bg.displayWidth, bg.displayHeight);
+        this.cameras.main.setRoundPixels(true);
         this.cameras.main.fadeIn(1000, 0, 0, 0);
 
         // Back UI
-        const backBtn = this.add.text(20, 20, '< MAP', {
-            fontFamily: '"Press Start 2P"',
+        const backBtn = this.add.text(20, 20, 'الخريطة >', {
+            fontFamily: '"Noto Kufi Arabic"',
             fontSize: '16px',
             fill: '#ffffff',
             backgroundColor: '#00000088',
@@ -84,26 +85,26 @@ export default class MissionScene extends Phaser.Scene {
         backBtn.on('pointerdown', () => {
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                 this.scene.start('MapScene');
+                this.scene.start('MapScene');
             });
         });
     }
 
     createDialogueUI() {
         const { width, height } = this.scale;
-        
+
         // Positioning the container at the bottom
         this.dialogueContainer = this.add.container(0, height).setScrollFactor(0).setDepth(1500).setAlpha(0);
         this.dialogueActive = false;
         this.choiceActive = false;
         this.dialogueQueue = [];
-        
+
         // Background Box (Quarter of screen, touching the bottom)
         const boxHeight = height * 0.25;
         const box = this.add.graphics();
         box.fillStyle(0x000000, 0.9);
         box.lineStyle(4, 0x6dc5b1, 1);
-        
+
         // The box sits from (0, -boxHeight) to (width, 0)
         box.fillRect(0, -boxHeight, width, boxHeight);
         box.strokeRect(0, -boxHeight, width, boxHeight);
@@ -116,30 +117,31 @@ export default class MissionScene extends Phaser.Scene {
         nameBg.fillRect(20, -boxHeight - 40, 200, 40);
         this.dialogueContainer.add(nameBg);
 
-        this.nameText = this.add.text(120, -boxHeight - 20, 'NAME', {
-            fontFamily: '"Press Start 2P"',
+        this.nameText = this.add.text(120, -boxHeight - 20, 'الاسم', {
+            fontFamily: '"Noto Kufi Arabic"',
             fontSize: '18px',
             fill: '#000000'
         }).setOrigin(0.5);
         this.dialogueContainer.add(this.nameText);
 
-        // Portrait Container (Visual Novel Style: Half visible above the name)
-        this.portrait = this.add.image(120, -boxHeight - 40, 'grandpa').setOrigin(0.5, 1).setScale(1.2);
+        // Portrait Container (Visual Novel Style: Half visible above the name box)
+        // Positioned 20px lower than before to ensure 'half' is above and half is submerged in the box
+        this.portrait = this.add.image(120, -boxHeight - 20, 'grandpa').setOrigin(0.5, 0.5).setScale(1.4);
         this.dialogueContainer.add(this.portrait);
 
-        // Dialogue Text
-        this.dialogueText = this.add.text(50, -boxHeight + 40, '', {
-            fontFamily: '"Arial"',
-            fontSize: '24px',
+        this.dialogueText = this.add.text(width - 50, -boxHeight + 40, '', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '22px',
             fill: '#ffffff',
+            align: 'right',
             wordWrap: { width: width - 100 }
-        });
+        }).setOrigin(1, 0);
         this.dialogueContainer.add(this.dialogueText);
 
         // Click to continue hint
-        const hint = this.add.text(width - 20, -20, 'ENTER / CLICK TO CONTINUE', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '12px',
+        const hint = this.add.text(width - 20, -20, 'اضغط للمتابعة', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '14px',
             fill: '#6dc5b1'
         }).setOrigin(1, 1);
         this.dialogueContainer.add(hint);
@@ -171,12 +173,14 @@ export default class MissionScene extends Phaser.Scene {
         const data = this.dialogueQueue.shift();
         this.nameText.setText(data.name);
         this.dialogueText.setText(data.text);
-        
+
         // Portrait handling
         if (data.portrait) {
             this.portrait.setTexture(data.portrait);
-            this.portrait.setScale(1.2);
             this.portrait.setVisible(true);
+            // Height of the dialogue box is 25% of screen. Name box is 40px above that.
+            // Center the sprite so half is above the name box top edge.
+            this.portrait.setY(-this.scale.height * 0.25 - 40);
         } else {
             this.portrait.setVisible(false);
         }
@@ -215,7 +219,7 @@ export default class MissionScene extends Phaser.Scene {
 
     hideDialogue() {
         this.dialogueActive = false;
-        
+
         // Pan back to player before resuming follow
         this.cameras.main.pan(this.player.x, this.player.y, 800, 'Power1', false, (cam, progress) => {
             if (progress === 1) {
@@ -241,17 +245,17 @@ export default class MissionScene extends Phaser.Scene {
         if (this.dialogueActive || this.choiceActive) return;
 
         const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.amine.x, this.amine.y);
-        
+
         if (dist > 150) {
             // Show hint to get closer
-            const hint = this.add.text(this.amine.x, this.amine.y - 50, 'Get closer to help!', {
-                fontFamily: 'Arial',
+            const hint = this.add.text(this.amine.x, this.amine.y - 50, '!اقترب أكثر للمساعدة', {
+                fontFamily: '"Noto Kufi Arabic"',
                 fontSize: '16px',
                 fill: '#ff0000',
                 stroke: '#000000',
                 strokeThickness: 3
             }).setOrigin(0.5).setDepth(2000);
-            
+
             this.tweens.add({
                 targets: hint,
                 y: hint.y - 30,
@@ -275,7 +279,7 @@ export default class MissionScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         this.choiceContainer = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(2000);
-        
+
         // Modal Background
         const bg = this.add.graphics();
         bg.fillStyle(0x000000, 0.9);
@@ -284,38 +288,49 @@ export default class MissionScene extends Phaser.Scene {
         bg.strokeRoundedRect(-250, -150, 500, 300, 15);
         this.choiceContainer.add(bg);
 
-        // Header Text
-        const title = this.add.text(0, -110, '"What should we do first?"', {
-            fontFamily: '"Press Start 2P"',
+        // Backpack Icon (Top Left of the bloc)
+        const backpackIcon = this.add.image(-220, -120, 'scout_backpack').setScale(0.8).setOrigin(0.5);
+        this.choiceContainer.add(backpackIcon);
+
+        // Header Text (Titled as Backpack)
+        const title = this.add.text(0, -110, 'حقيبة الظهر', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '20px',
+            fill: '#f9dc36'
+        }).setOrigin(0.5);
+        this.choiceContainer.add(title);
+
+        const subTitle = this.add.text(0, -80, 'شنوا نعملوا الأول؟', {
+            fontFamily: '"Noto Kufi Arabic"',
             fontSize: '14px',
             fill: '#ffffff'
         }).setOrigin(0.5);
-        this.choiceContainer.add(title);
+        this.choiceContainer.add(subTitle);
 
         // Item 1: Sterilizing Water
         const waterBtn = this.add.container(-120, 20);
         const waterIcon = this.add.image(0, -30, 'water_bottle').setScale(1).setInteractive({ useHandCursor: true });
-        const waterLabel = this.add.text(0, 40, 'Sterilizing\nWater', {
-            fontFamily: 'Arial', fontSize: '18px', fill: '#6dc5b1', align: 'center'
+        const waterLabel = this.add.text(0, 40, 'ماء\nمعقم', {
+            fontFamily: '"Noto Kufi Arabic"', fontSize: '16px', fill: '#6dc5b1', align: 'center'
         }).setOrigin(0.5);
         waterBtn.add([waterIcon, waterLabel]);
-        
+
         waterIcon.on('pointerdown', () => this.handleChoice('water'));
         waterIcon.on('pointerover', () => waterIcon.setScale(1.1));
         waterIcon.on('pointerout', () => waterIcon.setScale(1));
-        
+
         // Item 2: Bandages
         const bandageBtn = this.add.container(120, 20);
         const bandageIcon = this.add.image(0, -30, 'sterile_bandage').setScale(1).setInteractive({ useHandCursor: true });
-        const bandageLabel = this.add.text(0, 40, 'Clean\nBandages', {
-            fontFamily: 'Arial', fontSize: '18px', fill: '#6dc5b1', align: 'center'
+        const bandageLabel = this.add.text(0, 40, 'ضمادات\nنظيفة', {
+            fontFamily: '"Noto Kufi Arabic"', fontSize: '16px', fill: '#6dc5b1', align: 'center'
         }).setOrigin(0.5);
         bandageBtn.add([bandageIcon, bandageLabel]);
-        
+
         bandageIcon.on('pointerdown', () => this.handleChoice('bandage'));
         bandageIcon.on('pointerover', () => bandageIcon.setScale(1.1));
         bandageIcon.on('pointerout', () => bandageIcon.setScale(1));
-        
+
         this.choiceContainer.add([waterBtn, bandageBtn]);
 
         // Entrance animation
@@ -336,16 +351,33 @@ export default class MissionScene extends Phaser.Scene {
             duration: 200,
             onComplete: () => {
                 this.choiceContainer.destroy();
-                
+
                 if (choice === 'water') {
                     this.firstAidState.waterUsed = true;
-                    this.showDialogue('GRANDPA', "Good. Wash away the dirt first. We must clear the wound before we can help Amine further.", 'grandpa');
+                    this.startDialogueSequence([
+                        { name: 'أمين', text: "شكراً... هكا أحسن بارشا...", portrait: 'amine_injured' },
+                        { name: 'الجد', text: "برافو. الأول لازم ننظفوا الجرح بالماء قبل ما نديروا حاجة أخرى.", portrait: 'grandpa' }
+                    ]);
                 } else if (choice === 'bandage') {
                     if (this.firstAidState.waterUsed) {
                         this.firstAidState.bandageUsed = true;
-                        this.triggerDehydrationEvent();
+                        this.startDialogueSequence([
+                            { name: 'أمين', text: "شكراً... هكا أحسن بزاف...", portrait: 'amine_injured' },
+                            { name: 'أمين', text: "يا ربي... راسي كيدور... حاس مانيش بخير...", portrait: 'amine_injured' },
+                            { name: 'الجد', text: "يظهر عطشان بزاف. لازم نديوه للظل.", portrait: 'grandpa' }
+                        ]);
+
+                        // Displacement after this sequence
+                        this.time.delayedCall(100, () => {
+                            const checkFinished = setInterval(() => {
+                                if (!this.dialogueActive) {
+                                    clearInterval(checkFinished);
+                                    this.spawnNearTree();
+                                }
+                            }, 100);
+                        });
                     } else {
-                        this.showDialogue('GRANDPA', "Stop! You’ll trap the germs inside. Clean it before you cover it. Safety first, Scout!", 'grandpa');
+                        this.showDialogue('الجد', "وقف! ما تلفش قبل ما تنظف. المكروبات راح تتحبس تحت الضماد! السلامة أولاً!", 'grandpa');
                     }
                 }
             }
@@ -354,30 +386,30 @@ export default class MissionScene extends Phaser.Scene {
 
     triggerDehydrationEvent() {
         this.startDialogueSequence([
-            { name: 'AMINE', text: "Ohh, thank you my friend. I appreciate it", portrait: 'amine_injured' },
-            { name: 'AMINE', text: "Oh my god, I'm feeling dizzy", portrait: 'amine_injured' },
-            { name: 'GRANDPA', text: "It seems that he's dehydrated", portrait: 'grandpa' }
+            { name: 'أمين', text: "شكراً يا صاحبي. ما ننساهالكش", portrait: 'amine_injured' },
+            { name: 'أمين', text: "يا ربي... راسي كيدور", portrait: 'amine_injured' },
+            { name: 'الجد', text: "يظهر عطشان بزاف", portrait: 'grandpa' }
         ]);
 
         // Wait for dialogue to finish before spawning
         this.time.delayedCall(100, () => {
-             const checkFinished = setInterval(() => {
-                  if (!this.dialogueActive) {
-                       clearInterval(checkFinished);
-                       this.spawnNearTree();
-                  }
-             }, 100);
+            const checkFinished = setInterval(() => {
+                if (!this.dialogueActive) {
+                    clearInterval(checkFinished);
+                    this.spawnNearTree();
+                }
+            }, 100);
         });
     }
 
     spawnNearTree() {
         const { width, height } = this.scale;
-        
+
         // Fade out
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            // New coordinates (340, 491 on 1024 base)
-            const treeX = (345 / 1024) * this.cameras.main.getBounds().width;
+            // New coordinates (240, 491 on 1024 base - closer to the left shadow)
+            const treeX = (240 / 1024) * this.cameras.main.getBounds().width;
             const treeY = (495 / 1024) * this.cameras.main.getBounds().height;
 
             this.player.setPosition(treeX - 40, treeY);
@@ -385,7 +417,7 @@ export default class MissionScene extends Phaser.Scene {
             this.grandpa.setPosition(treeX + 100, treeY);
 
             this.missionPhase = 'DEHYDRATION_PHASE';
-            
+
             // Fade in
             this.cameras.main.fadeIn(500, 0, 0, 0);
         });
@@ -396,7 +428,7 @@ export default class MissionScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         this.backpackContainer = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(2000);
-        
+
         // Modal Background
         const bg = this.add.graphics();
         bg.fillStyle(0x000000, 0.95);
@@ -410,9 +442,9 @@ export default class MissionScene extends Phaser.Scene {
         this.backpackContainer.add(backpackIcon);
 
         // Title
-        const title = this.add.text(0, -100, 'BACKPACK', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '18px',
+        const title = this.add.text(0, -100, 'حقيبة الظهر', {
+            fontFamily: '"Noto Kufi Arabic"',
+            fontSize: '20px',
             fill: '#f9dc36'
         }).setOrigin(0.5);
         this.backpackContainer.add(title);
@@ -420,11 +452,11 @@ export default class MissionScene extends Phaser.Scene {
         // Water Bottle Option
         const waterBtn = this.add.container(0, 20);
         const waterIcon = this.add.image(0, -20, 'water_bottle').setScale(1.5).setInteractive({ useHandCursor: true });
-        const waterLabel = this.add.text(0, 60, 'GIVE WATER', {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#6dc5b1'
+        const waterLabel = this.add.text(0, 60, 'أعطيه الماء', {
+            fontFamily: '"Noto Kufi Arabic"', fontSize: '16px', fill: '#6dc5b1'
         }).setOrigin(0.5);
         waterBtn.add([waterIcon, waterLabel]);
-        
+
         waterIcon.on('pointerdown', () => {
             this.choiceActive = false;
             this.tweens.add({
@@ -433,7 +465,7 @@ export default class MissionScene extends Phaser.Scene {
                 duration: 200,
                 onComplete: () => {
                     this.backpackContainer.destroy();
-                    this.showDialogue('AMINE', "Refreshing... I feel much better now. Thank you, Scout!", 'amine_injured');
+                    this.showDialogue('أمين', "يا ربي شكراً بزاف", 'amine_injured');
                 }
             });
         });
@@ -454,28 +486,28 @@ export default class MissionScene extends Phaser.Scene {
         if (!this.sound.context) return;
         const ctx = this.sound.context;
         if (ctx.state === 'suspended') ctx.resume();
-        
+
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         const filter = ctx.createBiquadFilter();
-        
+
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(ctx.destination);
-        
+
         osc.type = 'sawtooth';
         // A "whoop" and then a "thud" noise
         osc.frequency.setValueAtTime(200, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
         osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.3);
-        
+
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(1000, ctx.currentTime);
         filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
 
         gain.gain.setValueAtTime(0.1, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        
+
         osc.start();
         osc.stop(ctx.currentTime + 0.4);
     }
@@ -562,22 +594,22 @@ export default class MissionScene extends Phaser.Scene {
         if (!this.introTriggered && (vx !== 0 || vy !== 0)) {
             this.introTriggered = true;
             this.startDialogueSequence([
-                { 
-                    name: 'GRANDPA', 
-                    text: "Keep your footing, Son. The moss in Beni Mtir makes these stones as slick as ice. The dampness here gets into your bones if you stay still too long.", 
+                {
+                    name: 'الجد',
+                    text: "دير بالك وين تحط رجليك يا ولدي. الطحلب في بني مطير يخلي الحجر يزلق كيف الجليد. الرطوبة هنا تدخل في عضامك.",
                     portrait: 'grandpa',
                     camTarget: 'grandpa'
                 },
-                { 
-                    name: 'AMINE', 
-                    text: "[Slipping sound / Squelch]", 
+                {
+                    name: 'أمين',
+                    text: "[صوت انزلاق]",
                     portrait: 'amine_injured',
                     sound: 'slip',
                     camTarget: 'amine'
                 },
-                { 
-                    name: 'AMINE', 
-                    text: "I slipped on the moss! My knee is cut, and I’m starting to shiver. This mist is so thick...", 
+                {
+                    name: 'أمين',
+                    text: "زلقت على الطحلب! ركبتي تجرحات و بديت نرتعش. الضباب كثيف بزاف...",
                     portrait: 'amine_injured'
                 }
             ]);
@@ -585,14 +617,14 @@ export default class MissionScene extends Phaser.Scene {
 
         // Animation / Direction flipping
         if (vx < 0) {
-             this.player.setTexture('scout_side');
-             this.player.setFlipX(false); // FIXED: Swap flip logic
+            this.player.setTexture('scout_side');
+            this.player.setFlipX(false); // FIXED: Swap flip logic
         } else if (vx > 0) {
-             this.player.setTexture('scout_side');
-             this.player.setFlipX(true); // FIXED: Swap flip logic
+            this.player.setTexture('scout_side');
+            this.player.setFlipX(true); // FIXED: Swap flip logic
         } else if (vy !== 0) {
-             this.player.setTexture(vy < 0 ? 'scout_back' : 'scout_front');
-             this.player.setFlipX(false);
+            this.player.setTexture(vy < 0 ? 'scout_back' : 'scout_front');
+            this.player.setFlipX(false);
         }
     }
 }

@@ -84,7 +84,7 @@ export default class LoadScene extends Phaser.Scene {
     showMenu() {
         const { width, height } = this.scale;
         // Emulate the "Pixels" reference with "START"
-        const playBtn = this.createButton(width / 2, height / 2 + 180, '#f9dc36', '#3e3e3e', 'START');
+        const playBtn = this.createButton(width / 2, height / 2 + 180, '#f9dc36', '#3e3e3e', 'ابدأ');
         
         playBtn.setInteractive({ useHandCursor: true });
         
@@ -146,8 +146,8 @@ export default class LoadScene extends Phaser.Scene {
 
         // Text inside the button
         const text = this.add.text(0, 0, textContent, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '16px',
+            fontFamily: '"Noto Kufi Arabic", "Press Start 2P"',
+            fontSize: '20px',
             fill: textColor
         }).setOrigin(0.5, 0.5);
         container.add(text);

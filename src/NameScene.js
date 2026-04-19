@@ -22,19 +22,19 @@ export default class NameScene extends Phaser.Scene {
         
         document.getElementById('submit-name-btn').onclick = () => {
             this.playClickSound();
-            const name = inputField.value.trim() || 'SCOUT';
-            this.registry.set('playerName', name.toUpperCase());
+            const name = inputField.value.trim() || '\u0643\u0634\u0627\u0641';
+            this.registry.set('playerName', name);
             overlay.classList.add('hidden');
             
             // Show Welcome text and "Loading" animation
-            this.add.text(width / 2, height / 2 - 50, `WELCOME, ${name.toUpperCase()}!`, {
-                fontFamily: '"Press Start 2P"',
+            this.add.text(width / 2, height / 2 - 50, `أهلاً يا ${name}!`, {
+                fontFamily: '"Noto Kufi Arabic"',
                 fontSize: '32px',
                 fill: '#ffcc00'
             }).setOrigin(0.5);
             
-            const loadText = this.add.text(width / 2, height / 2 + 50, 'PREPARING MAP...', {
-                fontFamily: '"Press Start 2P"',
+            const loadText = this.add.text(width / 2, height / 2 + 50, 'جاري تحضير الخريطة...', {
+                fontFamily: '"Noto Kufi Arabic"',
                 fontSize: '18px',
                 fill: '#ffffff'
             }).setOrigin(0.5);
