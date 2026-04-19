@@ -17,6 +17,12 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
     pixelArt: true, // Prevents blurring
+    physics: {
+        default: 'arcade',
+        arcade: {
+            debug: false
+        }
+    },
     scene: [BootScene, LoadScene, SelectionScene, NameScene, MapScene, MissionScene]
 };
 

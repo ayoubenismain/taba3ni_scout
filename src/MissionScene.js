@@ -9,21 +9,70 @@ export default class MissionScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Display the new map background
-        const bg = this.add.image(width / 2, height / 2, 'new_map_bg');
-        // Uniformly scale to cover screen
+        const bg = this.add.image(0, 0, 'new_map_bg').setOrigin(0, 0);
         const scaleX = width / bg.width;
         const scaleY = height / bg.height;
-        bg.setScale(Math.min(scaleX, scaleY));
+        const bgScale = Math.max(scaleX, scaleY); // Cover screen
+        bg.setScale(bgScale);
         
-        bg.alpha = 1;
+        // Bounds for movement (based on background size)
+        // Set top limit at 12.7% (Y=130/1024) to lock feet to street
+        const horizonY = bg.displayHeight * 0.127;
+        this.physics.world.setBounds(0, horizonY, bg.displayWidth, bg.displayHeight - horizonY);
+        
+        // Characters near the sign (approx. bottom center of the map context)
+        const signX = (435 / 1024) * bg.displayWidth;
+        const signY = (910 / 1024) * bg.displayHeight;
+
+        // Grandpa (NPC)
+        this.grandpa = this.physics.add.sprite(signX + 60, signY, 'grandpa');
+        this.grandpa.setScale(0.5).setImmovable(true);
+
+        // Amine (NPC) - Relocated to Left of Lake (X=610, Y=220 on 1024 base)
+        const amineX = (610 / 1024) * bg.displayWidth;
+        const amineY = (220 / 1024) * bg.displayHeight;
+        this.amine = this.physics.add.sprite(amineX, amineY, 'amine_injured');
+        this.amine.setScale(0.5).setImmovable(true).setInteractive({ useHandCursor: true });
+        
+        this.amine.on('pointerdown', () => this.handleAmineInteraction());
+
+        // Player (Kid)
+        this.player = this.physics.add.sprite(signX - 60, signY, 'scout_front');
+        this.player.setScale(0.5);
+        this.player.setCollideWorldBounds(true);
+
+        // Input Setup
+        this.keys = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D,
+            z: Phaser.Input.Keyboard.KeyCodes.Z,
+            q: Phaser.Input.Keyboard.KeyCodes.Q
+        });
+
+        // Mobile Joystick
+        this.createJoystick();
+
+        // Dialogue UI (Visual Novel Style)
+        this.createDialogueUI();
+
+        // Intro State
+        this.introTriggered = false;
+
+        // Camera Follow
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        this.cameras.main.setBounds(0, 0, bg.displayWidth, bg.displayHeight);
         this.cameras.main.fadeIn(1000, 0, 0, 0);
 
-        // Add a back button for testing or logic
-        const backBtn = this.add.text(40, 40, '< BACK', {
+        // Back UI
+        const backBtn = this.add.text(20, 20, '< MAP', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '24px',
-            fill: '#ffffff'
-        }).setInteractive({ useHandCursor: true });
+            fontSize: '16px',
+            fill: '#ffffff',
+            backgroundColor: '#00000088',
+            padding: { x: 10, y: 5 }
+        }).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(2000);
 
         backBtn.on('pointerdown', () => {
             this.cameras.main.fadeOut(500, 0, 0, 0);
@@ -31,5 +80,409 @@ export default class MissionScene extends Phaser.Scene {
                  this.scene.start('MapScene');
             });
         });
+    }
+
+    createDialogueUI() {
+        const { width, height } = this.scale;
+        
+        // Positioning the container so it's hidden below the screen initially
+        this.dialogueContainer = this.add.container(0, height + 100).setScrollFactor(0).setDepth(1500).setAlpha(0);
+        this.dialogueActive = false;
+        this.choiceActive = false;
+        this.dialogueQueue = [];
+        
+        // Background Box (Quarter of screen, touching the bottom)
+        const boxHeight = height * 0.28;
+        const box = this.add.graphics();
+        box.fillStyle(0x000000, 0.85);
+        box.lineStyle(4, 0x6dc5b1, 1);
+        // Positioned at (0, -boxHeight) so the bottom edges the container base (which will be at screen height)
+        box.fillRect(0, -boxHeight, width, boxHeight);
+        box.strokeRect(0, -boxHeight, width, boxHeight);
+        this.dialogueContainer.add(box);
+
+        // Portrait Container (to allow cropping or positioning)
+        this.portrait = this.add.image(150, -boxHeight - 20, 'grandpa').setOrigin(0.5, 1).setScale(1);
+        this.dialogueContainer.add(this.portrait);
+
+        // Name Box
+        const nameBg = this.add.graphics();
+        nameBg.fillStyle(0x6dc5b1, 1);
+        nameBg.fillRect(20, -boxHeight - 40, 200, 40);
+        this.dialogueContainer.add(nameBg);
+
+        this.nameText = this.add.text(120, -boxHeight - 20, 'NAME', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '18px',
+            fill: '#000000'
+        }).setOrigin(0.5);
+        this.dialogueContainer.add(this.nameText);
+
+        // Dialogue Text
+        this.dialogueText = this.add.text(50, -boxHeight + 40, '', {
+            fontFamily: '"Arial"',
+            fontSize: '24px',
+            fill: '#ffffff',
+            wordWrap: { width: width - 100 }
+        });
+        this.dialogueContainer.add(this.dialogueText);
+
+        // Click to continue hint
+        const hint = this.add.text(width - 20, -20, 'ENTER / CLICK TO CONTINUE', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            fill: '#6dc5b1'
+        }).setOrigin(1, 1);
+        this.dialogueContainer.add(hint);
+
+        // Input listeners for advancing
+        const advance = () => {
+            if (this.dialogueActive) {
+                this.nextDialogue();
+            }
+        };
+
+        this.input.on('pointerdown', advance);
+        this.input.keyboard.on('keydown-ENTER', advance);
+    }
+
+    startDialogueSequence(sequence) {
+        this.dialogueQueue = sequence;
+        this.dialogueActive = true;
+        this.player.setVelocity(0, 0);
+        this.nextDialogue();
+    }
+
+    nextDialogue() {
+        if (this.dialogueQueue.length === 0) {
+            this.hideDialogue();
+            return;
+        }
+
+        const data = this.dialogueQueue.shift();
+        this.nameText.setText(data.name);
+        this.dialogueText.setText(data.text);
+        
+        // Portrait handling
+        if (data.portrait) {
+            this.portrait.setTexture(data.portrait);
+            this.portrait.setScale(1.2);
+            this.portrait.setVisible(true);
+        } else {
+            this.portrait.setVisible(false);
+        }
+
+        // Camera Panning Logic
+        if (data.camTarget) {
+            this.cameras.main.stopFollow();
+            let tx = this.player.x;
+            let ty = this.player.y;
+
+            if (data.camTarget === 'amine') {
+                tx = this.amine.x;
+                ty = this.amine.y;
+            } else if (data.camTarget === 'grandpa') {
+                tx = this.grandpa.x;
+                ty = this.grandpa.y;
+            }
+
+            this.cameras.main.pan(tx, ty, 1000, 'Power2');
+        }
+
+        // Play sound if associated with this line
+        if (data.sound === 'slip') {
+            this.playSlipSound();
+        }
+
+        if (this.dialogueContainer.alpha === 0) {
+            this.tweens.add({
+                targets: this.dialogueContainer,
+                alpha: 1,
+                y: this.scale.height,
+                duration: 500,
+                ease: 'Power2'
+            });
+        }
+    }
+
+    hideDialogue() {
+        this.dialogueActive = false;
+        
+        // Pan back to player before resuming follow
+        this.cameras.main.pan(this.player.x, this.player.y, 800, 'Power1', false, (cam, progress) => {
+            if (progress === 1) {
+                cam.startFollow(this.player, true, 0.1, 0.1);
+            }
+        });
+
+        this.tweens.add({
+            targets: this.dialogueContainer,
+            alpha: 0,
+            y: this.scale.height + 100,
+            duration: 250,
+            ease: 'Power2'
+        });
+    }
+
+    showDialogue(name, text, portraitKey) {
+        // Compatibility method for single lines
+        this.startDialogueSequence([{ name, text, portrait: portraitKey }]);
+    }
+
+    handleAmineInteraction() {
+        // Only trigger if no dialogue is active
+        if (this.dialogueActive || this.choiceActive) return;
+
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.amine.x, this.amine.y);
+        
+        if (dist > 150) {
+            // Show hint to get closer
+            const hint = this.add.text(this.amine.x, this.amine.y - 50, 'Get closer to help!', {
+                fontFamily: 'Arial',
+                fontSize: '16px',
+                fill: '#ff0000',
+                stroke: '#000000',
+                strokeThickness: 3
+            }).setOrigin(0.5).setDepth(2000);
+            
+            this.tweens.add({
+                targets: hint,
+                y: hint.y - 30,
+                alpha: 0,
+                duration: 1000,
+                onComplete: () => hint.destroy()
+            });
+            return;
+        }
+
+        this.showChoiceUI();
+    }
+
+    showChoiceUI() {
+        this.choiceActive = true;
+        this.player.setVelocity(0, 0);
+        const { width, height } = this.scale;
+
+        this.choiceContainer = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(2000);
+        
+        // Modal Background
+        const bg = this.add.graphics();
+        bg.fillStyle(0x000000, 0.9);
+        bg.lineStyle(4, 0x6dc5b1, 1);
+        bg.fillRoundedRect(-250, -150, 500, 300, 15);
+        bg.strokeRoundedRect(-250, -150, 500, 300, 15);
+        this.choiceContainer.add(bg);
+
+        // Header Text
+        const title = this.add.text(0, -110, '"What should we do first?"', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        this.choiceContainer.add(title);
+
+        // Item 1: Sterilizing Water
+        const waterBtn = this.add.container(-120, 20);
+        const waterIcon = this.add.image(0, -30, 'prop_jug').setScale(0.8).setInteractive({ useHandCursor: true });
+        const waterLabel = this.add.text(0, 40, 'Sterilizing\nWater', {
+            fontFamily: 'Arial', fontSize: '18px', fill: '#6dc5b1', align: 'center'
+        }).setOrigin(0.5);
+        waterBtn.add([waterIcon, waterLabel]);
+        
+        waterIcon.on('pointerdown', () => this.handleChoice('water'));
+        waterIcon.on('pointerover', () => waterIcon.setScale(0.9));
+        waterIcon.on('pointerout', () => waterIcon.setScale(0.8));
+        
+        // Item 2: Bandages
+        const bandageBtn = this.add.container(120, 20);
+        // Simple graphics for bandage
+        const bandageIcon = this.add.graphics().setInteractive(new Phaser.Geom.Rectangle(-40, -60, 80, 80), Phaser.Geom.Rectangle.Contains);
+        bandageIcon.fillStyle(0xffffff, 1);
+        bandageIcon.fillRect(-30, -50, 60, 40);
+        bandageIcon.lineStyle(2, 0xff0000, 1);
+        bandageIcon.strokeRect(-10, -50, 20, 40);
+        bandageIcon.strokeRect(-30, -40, 60, 20);
+        
+        const bandageLabel = this.add.text(0, 40, 'Clean\nBandages', {
+            fontFamily: 'Arial', fontSize: '18px', fill: '#6dc5b1', align: 'center'
+        }).setOrigin(0.5);
+        bandageBtn.add([bandageIcon, bandageLabel]);
+        
+        bandageIcon.on('pointerdown', () => this.handleChoice('bandage'));
+        
+        this.choiceContainer.add([waterBtn, bandageBtn]);
+
+        // Entrance animation
+        this.choiceContainer.setScale(0);
+        this.tweens.add({
+            targets: this.choiceContainer,
+            scale: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
+    }
+
+    handleChoice(choice) {
+        this.choiceActive = false;
+        this.tweens.add({
+            targets: this.choiceContainer,
+            scale: 0,
+            duration: 200,
+            onComplete: () => {
+                this.choiceContainer.destroy();
+                
+                if (choice === 'water') {
+                    this.showDialogue('GRANDPA', "Good. Wash away the dirt first. We must clear the wound before we can help Amine further.", 'grandpa');
+                } else {
+                    this.showDialogue('GRANDPA', "Stop! You’ll trap the germs inside. Clean it before you cover it. Safety first, Scout!", 'grandpa');
+                }
+            }
+        });
+    }
+
+    playSlipSound() {
+        if (!this.sound.context) return;
+        const ctx = this.sound.context;
+        if (ctx.state === 'suspended') ctx.resume();
+        
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.type = 'sawtooth';
+        // A "whoop" and then a "thud" noise
+        osc.frequency.setValueAtTime(200, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+        osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.3);
+        
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1000, ctx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+    }
+
+
+    createJoystick() {
+        const { width, height } = this.scale;
+        const x = 120;
+        const y = height - 120;
+        const radius = 60;
+
+        this.joystickBase = this.add.circle(x, y, radius, 0x888888, 0.5)
+            .setScrollFactor(0)
+            .setDepth(100);
+        this.joystickThumb = this.add.circle(x, y, radius / 2, 0xcccccc, 0.8)
+            .setScrollFactor(0)
+            .setDepth(101);
+
+        this.joyState = { x: 0, y: 0, active: false };
+
+        this.input.on('pointerdown', (pointer) => {
+            if (pointer.x < width / 2 && pointer.y > height / 2) {
+                this.joyState.active = true;
+                this.updateJoystick(pointer);
+            }
+        });
+
+        this.input.on('pointermove', (pointer) => {
+            if (this.joyState.active) {
+                this.updateJoystick(pointer);
+            }
+        });
+
+        this.input.on('pointerup', () => {
+            this.joyState.active = false;
+            this.joyState.x = 0;
+            this.joyState.y = 0;
+            this.joystickThumb.setPosition(this.joystickBase.x, this.joystickBase.y);
+        });
+    }
+
+    updateJoystick(pointer) {
+        const base = this.joystickBase;
+        const dist = Phaser.Math.Distance.Between(base.x, base.y, pointer.x, pointer.y);
+        const angle = Phaser.Math.Angle.Between(base.x, base.y, pointer.x, pointer.y);
+        const radius = base.radius;
+
+        const moveDist = Math.min(dist, radius);
+        const tx = base.x + Math.cos(angle) * moveDist;
+        const ty = base.y + Math.sin(angle) * moveDist;
+
+        this.joystickThumb.setPosition(tx, ty);
+
+        this.joyState.x = Math.cos(angle) * (moveDist / radius);
+        this.joyState.y = Math.sin(angle) * (moveDist / radius);
+    }
+
+    update() {
+        if (this.dialogueActive || this.choiceActive) {
+            this.player.setVelocity(0, 0);
+            return;
+        }
+
+        const speed = 200;
+        let vx = 0;
+        let vy = 0;
+
+        // Keyboard Input (WASD or ZQSD)
+        if (this.keys.up.isDown || this.keys.z.isDown) vy = -1;
+        else if (this.keys.down.isDown) vy = 1;
+
+        if (this.keys.left.isDown || this.keys.q.isDown) vx = -1;
+        else if (this.keys.right.isDown) vx = 1;
+
+        // Joystick Input
+        if (this.joyState.active) {
+            vx = this.joyState.x;
+            vy = this.joyState.y;
+        }
+
+        this.player.setVelocity(vx * speed, vy * speed);
+
+        // Trigger dialogue on first step
+        if (!this.introTriggered && (vx !== 0 || vy !== 0)) {
+            this.introTriggered = true;
+            this.startDialogueSequence([
+                { 
+                    name: 'GRANDPA', 
+                    text: "Keep your footing, Son. The moss in Beni Mtir makes these stones as slick as ice. The dampness here gets into your bones if you stay still too long.", 
+                    portrait: 'grandpa',
+                    camTarget: 'grandpa'
+                },
+                { 
+                    name: 'AMINE', 
+                    text: "[Slipping sound / Squelch]", 
+                    portrait: 'amine_injured',
+                    sound: 'slip',
+                    camTarget: 'amine'
+                },
+                { 
+                    name: 'AMINE', 
+                    text: "I slipped on the moss! My knee is cut, and I’m starting to shiver. This mist is so thick...", 
+                    portrait: 'amine_injured'
+                }
+            ]);
+        }
+
+        // Animation / Direction flipping
+        if (vx < 0) {
+             this.player.setTexture('scout_side');
+             this.player.setFlipX(false); // FIXED: Swap flip logic
+        } else if (vx > 0) {
+             this.player.setTexture('scout_side');
+             this.player.setFlipX(true); // FIXED: Swap flip logic
+        } else if (vy !== 0) {
+             this.player.setTexture(vy < 0 ? 'scout_back' : 'scout_front');
+             this.player.setFlipX(false);
+        }
     }
 }

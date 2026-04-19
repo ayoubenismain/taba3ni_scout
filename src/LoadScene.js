@@ -15,6 +15,16 @@ export default class LoadScene extends Phaser.Scene {
         this.load.image('map_icon_boy', '/assets/boy_wihout_bg.png');
         this.load.image('map_bg', '/assets/map_this.png');
         this.load.image('new_map_bg', '/assets/new_map_bg.png');
+
+        // Sliced Sprite Assets
+        const spriteList = [
+            'scout_front', 'scout_back', 'scout_side', 'amine_injured', 'grandpa',
+            'cobblestones', 'oil_jug', 'merchant_cart', 'archway',
+            'scout_backpack', 'first_aid_kit', 'water_bottle', 'antiseptic_wipe', 'sterile_bandage', 'status_dizzy'
+        ];
+        spriteList.forEach(sprite => {
+            this.load.image(sprite, `/assets/sprites/${sprite}.png`);
+        });
     }
 
     create() {
